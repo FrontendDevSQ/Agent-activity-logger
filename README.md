@@ -75,7 +75,6 @@ Open `http://127.0.0.1:5000` in your browser to inspect sessions, events, and al
 
 3. Click **Verify log integrity** in the web viewer to confirm that modification is detected.
 
-## Limitations & Notes
 
-- **Heuristic detection:** Regex and keyword rules catch common prompt injection and risky patterns, but determined adversaries can still use obfuscation or indirect phrasing. Treat this as an educational/observability guard rather than a complete security boundary.
-- **Local SQLite usage:** Designed for local development, demos, and experimentation; avoid committing `agent_logs.db` or `.env` files to version control.
+
+
