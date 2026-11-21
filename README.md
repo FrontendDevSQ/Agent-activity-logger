@@ -1,22 +1,81 @@
-# Agent Activity Logger (Agentic AI Security)
+# Agent Activity Logger
 
-Records every decision and tool call an AI agent makes, with a reason, and shows them on a timeline.
-It also detects prompt injection and sensitive or dangerous actions.
+An observability and security guard project for tool-calling AI agents. It records every step of an agent's execution in SQLite with a SHA-256 hash chain, checks untrusted tool outputs and tool arguments for prompt injection or risky behavior, and provides a web viewer to inspect sessions and verify log integrity.
+
+## Why This Exists
+
+Autonomous or tool-calling agents can read untrusted content from files or external sources. If hidden instructions are embedded inside that data, an agent may trigger unintended or risky tool calls without clear visibility. This project gives you:
+
+- **Step-by-step audit trails** of user tasks, model decisions, tool calls with explicit `reason` fields, tool outputs, and final responses.
+- **Pre- and post-tool security checks** (`detect.py`) to spot prompt injection patterns, sensitive file access, path traversal, or risky commands.
+- **Tamper-evident logging** (`logger.py` & `tamper.py`) using a SHA-256 hash chain (`prev_hash` -> `hash`) and integrity verification.
+- **Interactive log viewer** (`viewer.py` + `templates/index.html`) to browse sessions, inspect events, and test tamper detection.
+
+## Project Structure
+
+```text
+agent-logger/
+├── agent.py            # Sandbox tools and scenario setup (normal / attack)
+├── real_agent.py       # LLM agent loop with tool calling (Groq, Gemini, OpenAI)
+├── detect.py           # Prompt injection & risky tool-call checks
+├── logger.py           # SQLite storage, redaction, and SHA-256 hash chain
+├── tamper.py           # Demo script that modifies a high-risk log row
+├── viewer.py           # Flask web UI & API for viewing logs and verifying chain
+├── requirements.txt    # Python dependencies
+├── sandbox/            # Sample files used during runs
+└── templates/
+    └── index.html      # Web dashboard template
+```
 
 ## Setup
-    pip install -r requirements.txt
-    export GROQ_API_KEY=your_key      # Windows PowerShell: $env:GROQ_API_KEY="your_key"
 
-## Run
-    python real_agent.py normal       # real LLM, clean task
-    python real_agent.py attack       # real LLM, task file contains a prompt injection
-    python agent.py attack            # offline mock agent (no API key needed)
-    GUARD=block python real_agent.py attack   # guard blocks risky calls (default: monitor)
-    python viewer.py                  # open http://127.0.0.1:5000
+1. **Install dependencies**
 
-## Files
-- logger.py: SQLite log with a hash chain (tamper-evident) and integrity check
-- detect.py: prompt-injection, sensitive-access, path-traversal and dangerous-command detection
-- agent.py: sandboxed tools, guard (monitor/block) and mock agent
-- real_agent.py: LLM agent using Groq, Gemini or OpenAI-compatible APIs
-- viewer.py + templates/index.html: timeline viewer
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Set your API key** (for `real_agent.py`)
+
+   PowerShell:
+   ```powershell
+   $env:PROVIDER="groq"
+   $env:GROQ_API_KEY="your_api_key_here"
+   ```
+
+   Optional provider/model overrides:
+   - `PROVIDER`: `groq` (default), `gemini`, or `openai`
+   - `MODEL`: override the default model for the selected provider
+
+## Usage
+
+### 1. Run the agent in `normal` or `attack` mode
+
+```bash
+python real_agent.py normal
+python real_agent.py attack
+```
+
+### 2. Open the log viewer
+
+```bash
+python viewer.py
+```
+
+Open `http://127.0.0.1:5000` in your browser to inspect sessions, events, and alerts.
+
+### 3. Test tamper detection
+
+1. Run an `attack` session so a high-risk event is recorded.
+2. Run the tamper demo script:
+
+   ```bash
+   python tamper.py
+   ```
+
+3. Click **Verify log integrity** in the web viewer to confirm that modification is detected.
+
+## Limitations & Notes
+
+- **Heuristic detection:** Regex and keyword rules catch common prompt injection and risky patterns, but determined adversaries can still use obfuscation or indirect phrasing. Treat this as an educational/observability guard rather than a complete security boundary.
+- **Local SQLite usage:** Designed for local development, demos, and experimentation; avoid committing `agent_logs.db` or `.env` files to version control.
